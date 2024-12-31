@@ -2,7 +2,9 @@
 This file is dumping the IANA root zone and sorting it in the database
 Link to IANA website : https://www.internic.net/domain/root.zone
 """
+import concurrent.futures
 import json
+import threading
 import urllib.request
 from tldtester.models import TLD, RootZone
 from django.core.exceptions import MultipleObjectsReturned
@@ -208,7 +210,10 @@ def main():
             zonesorter(zonefile)
         tlds = tlddownloader()
         if tlds is not None:
-            grabber(tlds, rdaptlds)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(grabber, [tld], rdaptlds) for tld in tlds]
+                results = [future.result() for future in futures]
+
     except Exception as e:
         print(e)
 
